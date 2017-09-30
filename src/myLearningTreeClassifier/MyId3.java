@@ -10,6 +10,7 @@ import weka.core.Instance;
 import weka.core.Capabilities;
 import weka.core.FastVector;
 import java.util.Enumeration;
+import java.util.LinkedList;
 import weka.core.NoSupportForMissingValuesException;
 
 /**
@@ -22,6 +23,10 @@ public class MyId3 extends Classifier {
      * This node's attribute.
      */
     protected Attribute myAttributeLabel = null;
+    /**
+     * Dataset class attribute.
+     */
+    protected Attribute myClassLabel;
     /**
      * 
      */
@@ -55,6 +60,10 @@ public class MyId3 extends Classifier {
      * class values, if not then it is null.
      */
     protected double classValue;
+    /**
+     * 
+     */
+    protected LinkedList<Integer> selectedIndex;
     
     @Override
     public Capabilities getCapabilities(){
@@ -79,6 +88,8 @@ public class MyId3 extends Classifier {
         myCapabilities.testWithFail(data);
         
         data.deleteWithMissingClass();
+        myClassLabel = data.classAttribute();
+        selectedIndex = new LinkedList<>();
         root = this;
         buildTree(data, this);
     }
@@ -96,17 +107,19 @@ public class MyId3 extends Classifier {
             throw new NoSupportForMissingValuesException("Id3: no missing values, "
                                                          + "please.");
         }
+        double retval = Instance.missingValue(); 
         if(isLeaf){
-            return classValue;
+            //System.out.println (instance);
+            //System.out.println("CLASSIFIED TO " + myClassLabel.value((int)classValue));
+            retval = classValue;
         }
         else{
-            if(myChilds[(int) instance.value(myAttributeLabel)] != null){
-                return myChilds[(int) instance.value(myAttributeLabel)].classifyInstance(instance);
-            }
-            else{
-                return 0d;
+            int index = (int) instance.value(myAttributeLabel);
+            if(index >= 0 && index < myChilds.length && myChilds[index] != null){
+                retval = myChilds[index].classifyInstance(instance);
             }
         }
+        return retval;
     }
     
     /**
@@ -115,7 +128,34 @@ public class MyId3 extends Classifier {
      */
     @Override
     public String toString(){
-        return("hehe"); //stub
+        return toStringRecursive();
+    }
+    
+    private String toStringRecursive(){
+        StringBuffer output = new StringBuffer();
+        if(isLeaf){
+            output.append(": "+ myClassLabel.value((int)classValue));
+        }
+        else{
+            for (int i = 0; i < myChilds.length; i++){
+                if(this != root){
+                    output.append("\n|\t");
+                }
+                output.append(myAttributeLabel.name() + " = " + myAttributeLabel.value(i));
+                if(myChilds[i] == null){
+                    output.append(" : null");
+                }
+                else{ 
+                    output.append(myChilds[i].toStringRecursive());
+                }
+            }
+        }
+        output.append("\n");
+        return output.toString();
+    }
+    
+    protected boolean isAttributeAlreadySelected(int attributeIndex){
+        return selectedIndex.contains(attributeIndex);
     }
     
     protected MyId3 buildTree(Instances dataset, MyId3 rootNode){
@@ -137,7 +177,7 @@ public class MyId3 extends Classifier {
             return this;
         }
         else{    
-            int countAttribute = dataset.numAttributes();
+            int countAttribute = dataset.numAttributes() - selectedIndex.size();
             //countAttribute =1, and it is assumed to be dataset classAttribute
             if(countAttribute == 1){
                 myInfoGain = 0d;
@@ -159,27 +199,36 @@ public class MyId3 extends Classifier {
             //select max info gain
             int maxInfoGainIndex = 0;
             for(int i = 0; i < countAttribute; i++){
-                if(infoGains[i] > infoGains[maxInfoGainIndex]){
+                if(!isAttributeAlreadySelected(i) && 
+                    infoGains[i] > infoGains[maxInfoGainIndex]){
                     maxInfoGainIndex = i;
                 }
             }
             myAttributeLabel = dataset.attribute(maxInfoGainIndex);
             myInfoGain = infoGains[maxInfoGainIndex];
+            selectedIndex.add(maxInfoGainIndex);
             
+            //System.out.println(myAttributeLabel);
             Instances[] dataSubsets = getSubset(dataset, myAttributeLabel);
+            /*
             for (Instances dataSubset : dataSubsets) {
                 dataSubset.deleteAttributeAt(maxInfoGainIndex);
             }
+            */
             myChilds = new MyId3[dataSubsets.length];
             for (int i = 0 ; i < dataSubsets.length; i++){
                 myChilds[i] = new MyId3();
+                myChilds[i].myClassLabel = myClassLabel;
+                myChilds[i].selectedIndex = new LinkedList<>();
+                for(Integer el : selectedIndex){
+                    myChilds[i].selectedIndex.add(el);
+                }
                 if(dataSubsets[i].numInstances() == 0){
                     myChilds[i].root = rootNode;
                     myChilds[i].isLeaf = true;
                     myChilds[i].myEntropyValue = 0d;
                     myChilds[i].myInfoGain = 0d;
                     myChilds[i].classValue = maxIndex;
-                    return this;
                 }
                 else{
                     myChilds[i] = myChilds[i].buildTree(dataSubsets[i], rootNode);

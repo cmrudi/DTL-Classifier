@@ -31,7 +31,7 @@ public class Id3Main {
         try {
             //membaca dataset yang diberikan, diberikan dari mana?
             Instances data = DataSource.read("C:\\Program Files\\Weka-3-8\\data\\"
-                    + "iris.arff");
+                    + "weather.numeric.arff");
             if(data.classIndex() == -1)
                 data.setClassIndex(data.numAttributes() - 1);
             
@@ -53,18 +53,23 @@ public class Id3Main {
             myID3.buildClassifier(resultFilter);
             
             //System.out.println("Weka-ID3 tree model");
-            //System.out.println(wekaID3.toString());
+            //System.out.println(wekaID3);
+            //System.out.println();
+            //System.out.println("My-ID3 tree model");
+            //System.out.println(myID3);
+            
             System.out.println(resultFilter.toSummaryString());
             
-            evaluator.crossValidateModel(wekaID3, resultFiltercopy, 10, new Random(103901));
+            evaluator.crossValidateModel(wekaID3, resultFiltercopy, 7, new Random(103057));
             System.out.println(evaluator.toSummaryString("Weka-Id3 10-fold result", false));
             
             evaluator = new Evaluation(resultFilter);
-            evaluator.crossValidateModel(myID3, resultFiltercopy, 10, new Random(103901));
-            //evaluator.evaluateModel(myID3, resultFiltercopy);
+            evaluator.crossValidateModel(myID3, resultFiltercopy, 7, new Random(103057));
             System.out.println(evaluator.toSummaryString("my-Id3 10-fold result", false));
+            //evaluator.evaluateModel(myID3, resultFiltercopy);
             //System.out.println(evaluator.toSummaryString("my-Id3 full training result", false));
             
+            /*
             //Melakukan pembelajaran dataset dengan skema full-training
             Evaluation evaluator2 = new Evaluation(resultFilter);
             Classifier cls = new Id3();
