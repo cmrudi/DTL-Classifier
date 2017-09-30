@@ -100,7 +100,12 @@ public class MyId3 extends Classifier {
             return classValue;
         }
         else{
-            return myChilds[(int) instance.value(myAttributeLabel)].classifyInstance(instance);
+            if(myChilds[(int) instance.value(myAttributeLabel)] != null){
+                return myChilds[(int) instance.value(myAttributeLabel)].classifyInstance(instance);
+            }
+            else{
+                return 0d;
+            }
         }
     }
     
@@ -144,7 +149,12 @@ public class MyId3 extends Classifier {
             //for each attribute, calculate its infogain.
             double[] infoGains = new double[countAttribute];
             for(int i = 0; i < countAttribute; i++){
-                infoGains[i] = calculateInfoGain(dataset, dataset.attribute(i));
+                if(i != dataset.classIndex()){
+                    infoGains[i] = calculateInfoGain(dataset, dataset.attribute(i));
+                }
+                else{
+                    infoGains[i] = -99;
+                }
             }
             //select max info gain
             int maxInfoGainIndex = 0;
@@ -162,6 +172,7 @@ public class MyId3 extends Classifier {
             }
             myChilds = new MyId3[dataSubsets.length];
             for (int i = 0 ; i < dataSubsets.length; i++){
+                myChilds[i] = new MyId3();
                 if(dataSubsets[i].numInstances() == 0){
                     myChilds[i].root = rootNode;
                     myChilds[i].isLeaf = true;
@@ -171,7 +182,7 @@ public class MyId3 extends Classifier {
                     return this;
                 }
                 else{
-                    myChilds[i] = buildTree(dataSubsets[i], rootNode);
+                    myChilds[i] = myChilds[i].buildTree(dataSubsets[i], rootNode);
                 }
             }
             return this;
@@ -251,8 +262,10 @@ public class MyId3 extends Classifier {
         Enumeration enumInstances = dataset.enumerateInstances();
         int dataSubsetContainerLen = attr.numValues();
         Instances[] dataSubsetContainer = new Instances[dataSubsetContainerLen];
+        
+        //Must specify data subset attributes first in order to create subset instances from dataset
         FastVector dataSplitAttr = new FastVector();
-        for(int i = 0; i < dataSubsetContainerLen; i++){
+        for(int i = 0; i < dataset.numAttributes(); i++){
             dataSplitAttr.addElement(dataset.attribute(i).copy());
         } 
         for(int i = 0; i < dataSubsetContainerLen; i++){
@@ -261,10 +274,15 @@ public class MyId3 extends Classifier {
                                                   dataset.numInstances());
             dataSubsetContainer[i].setClassIndex(dataset.classIndex());
         }
+        
+        //Create subset of dataset.
         while(enumInstances.hasMoreElements()){
             Instance currentInstance = (Instance)enumInstances.nextElement();
             String currentAttrValue = currentInstance.stringValue(attr);
             dataSubsetContainer[attr.indexOfValue(currentAttrValue)].add(currentInstance);
+        }
+        for(int i = 0; i < dataSubsetContainerLen; i++){
+            dataSubsetContainer[i].compactify();
         }
         return dataSubsetContainer;
     }
