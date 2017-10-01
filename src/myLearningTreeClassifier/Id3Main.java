@@ -30,8 +30,8 @@ public class Id3Main {
     public static void main(String[] args){
         try {
             //membaca dataset yang diberikan, diberikan dari mana?
-            Instances data = DataSource.read("C:\\Program Files\\Weka-3-8\\data\\"
-                    + "weather.numeric.arff");
+            Instances data = DataSource.read("/home/asus/Semester7/ML/weka-3-6-14/data/"
+                    + "iris.arff");
             if(data.classIndex() == -1)
                 data.setClassIndex(data.numAttributes() - 1);
             
