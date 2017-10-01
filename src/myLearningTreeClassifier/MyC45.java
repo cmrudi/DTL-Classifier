@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -70,6 +71,10 @@ public class MyC45 extends Classifier {
     protected List<MyC45> listOfPrunedCandidate = null;
     protected Evaluation evaluator;
     protected double lastAccuracy;
+    
+    protected double gainRatio;
+    // manually update
+    protected boolean isUseGainRatio = false;
     
     @Override
     public Capabilities getCapabilities(){
@@ -195,25 +200,42 @@ public class MyC45 extends Classifier {
             //otherwise, begin building child tree.
             //for each attribute, calculate its infogain.
             double[] infoGains = new double[countAttribute];
+            double[] gainRatio = new double[countAttribute];
             for(int i = 0; i < countAttribute; i++){
                 if(i != dataset.classIndex()){
                     infoGains[i] = calculateInfoGain(dataset, dataset.attribute(i));
+                    gainRatio[i] = calculateGainRatio(dataset, i, infoGains[i]);
                 }
                 else{
                     infoGains[i] = -99;
+                    gainRatio[i] = -99;
                 }
             }
             //select max info gain
             int maxInfoGainIndex = 0;
+            int maxGainRatioIndex = 0;
             for(int i = 0; i < countAttribute; i++){
                 if(!isAttributeAlreadySelected(i) && 
                     infoGains[i] > infoGains[maxInfoGainIndex]){
                     maxInfoGainIndex = i;
                 }
+                if(!isAttributeAlreadySelected(i) && 
+                        gainRatio[i] > gainRatio[maxGainRatioIndex]){
+                        maxGainRatioIndex = i;
+                }
+                
             }
-            myAttributeLabel = dataset.attribute(maxInfoGainIndex);
-            myInfoGain = infoGains[maxInfoGainIndex];
-            selectedIndex.add(maxInfoGainIndex);
+            
+            if (isUseGainRatio) {
+            	myAttributeLabel = dataset.attribute(maxGainRatioIndex);
+                myInfoGain = infoGains[maxGainRatioIndex];
+                selectedIndex.add(maxGainRatioIndex);
+            } else {
+            	myAttributeLabel = dataset.attribute(maxInfoGainIndex);
+                myInfoGain = infoGains[maxInfoGainIndex];
+                selectedIndex.add(maxInfoGainIndex);
+            }
+            
             
             //System.out.println(myAttributeLabel);
             Instances[] dataSubsets = getSubset(dataset, myAttributeLabel);
@@ -305,6 +327,26 @@ public class MyC45 extends Classifier {
             result -= classProbability * dataSplitEntropy[i];
         }
         return result;
+    }
+    
+    protected double calculateGainRatio(Instances dataset, int attributeIdx, double infoGain) {
+    	double[] test = dataset.attributeToDoubleArray(attributeIdx);
+    	TreeMap<Double, Integer>tm = new TreeMap<Double,Integer>();
+    	for (int i = 0; i < test.length; i++) {
+    		if (tm.containsKey(test[i])) {
+    			tm.put(test[i], tm.get(test[i]) + 1);
+    		} else {
+    			tm.put(test[i], 1);
+    		}
+    	}
+    	double informationSplit = 0;
+    	int numInstances = test.length;
+    	for (int i = 0; i < tm.size(); i++) {
+    		informationSplit += (-1)*(tm.get(i)/numInstances)
+    				*((Math.log(tm.get(i)/numInstances))/(Math.log(2d)));
+    	}
+    	
+    	return infoGain/informationSplit;
     }
     
     /**
@@ -403,7 +445,9 @@ public class MyC45 extends Classifier {
     }
     
     public static void main(String args[]) {
+    
     	try {
+    		
 	    	Instances data = DataSource.read("/home/asus/Semester7/ML/weka-3-6-14/data/"
 	                + "weather.nominal.arff");
 	        if(data.classIndex() == -1)
@@ -423,15 +467,33 @@ public class MyC45 extends Classifier {
 	        Evaluation evaluator = new Evaluation(resultFilter);
 	        MyC45 c45 = new MyC45();
 	        c45.buildClassifier(resultFilter);
-	        c45.printTree(c45,0);
+	        //c45.printTree(c45,0);
 	        
 	        Evaluation evaluat = new Evaluation(resultFilter);
 	    	evaluat.evaluateModel(c45, resultFilter);
-	    	System.out.println(evaluat.toSummaryString());
+	    	//System.out.println(evaluat.toSummaryString());
+	    	double[] test = data.attributeToDoubleArray(1);
+	    	for (int i = 0; i < test.length; i++) {
+	    		System.out.println(test[i]);
+	    	}
+	    	System.out.println(data.attributeToDoubleArray(1));
 			
     	} catch (Exception e) {
     		System.out.println(e);
     	}
+    	
 	}
+    
+    protected Instances removeMissingValues(Instances data) {
+    	for (int i = data.numInstances() - 1; i >= 0; i--) {
+    	    Instance inst = data.instance(i);
+    	    if (inst.classIsMissing()) {
+    	        data.delete(i);
+    	    }
+    	    i--;
+    	}
+    	return data;
+    }
+    
     
 }
