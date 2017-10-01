@@ -30,8 +30,8 @@ public class Id3Main {
     public static void main(String[] args){
         try {
             //membaca dataset yang diberikan, diberikan dari mana?
-            Instances data = DataSource.read("C:\\Program Files\\Weka-3-8\\data\\"
-                    + "weather.numeric.arff");
+            Instances data = DataSource.read("/home/asus/Semester7/ML/weka-3-6-14/data/"
+                    + "iris.arff");
             if(data.classIndex() == -1)
                 data.setClassIndex(data.numAttributes() - 1);
             
@@ -48,7 +48,8 @@ public class Id3Main {
             //Melakukan pembelajaran dataset dengan skema 10-fold cross validation
             Evaluation evaluator = new Evaluation(resultFilter);
             Classifier wekaID3   = new Id3();
-            Classifier myID3     = new MyId3();
+            Classifier myId3 = new MyId3();
+            MyId3 myID3 = new MyId3();
             wekaID3.buildClassifier(resultFilter);
             myID3.buildClassifier(resultFilter);
             
@@ -57,7 +58,7 @@ public class Id3Main {
             //System.out.println();
             //System.out.println("My-ID3 tree model");
             //System.out.println(myID3);
-            
+            /*
             System.out.println(resultFilter.toSummaryString());
             
             evaluator.crossValidateModel(wekaID3, resultFiltercopy, 7, new Random(103057));
@@ -66,8 +67,9 @@ public class Id3Main {
             evaluator = new Evaluation(resultFilter);
             evaluator.crossValidateModel(myID3, resultFiltercopy, 7, new Random(103057));
             System.out.println(evaluator.toSummaryString("my-Id3 10-fold result", false));
-            //evaluator.evaluateModel(myID3, resultFiltercopy);
-            //System.out.println(evaluator.toSummaryString("my-Id3 full training result", false));
+            */
+            evaluator.evaluateModel(myID3, resultFiltercopy);
+            System.out.println(evaluator.toSummaryString("my-Id3 full training result", false));
             
             /*
             //Melakukan pembelajaran dataset dengan skema full-training
